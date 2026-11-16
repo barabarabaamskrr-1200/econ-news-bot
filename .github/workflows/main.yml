@@ -2,8 +2,8 @@ name: Daily Econ Briefing
 
 on:
   schedule:
-    # 한국 시간 매일 아침 9시 정각에 자동 실행 (UTC 기준 22시)
-    - cron: '0 22 * * *'
+    # 한국 시간 매일 아침 10시 정각에 자동 실행 (UTC 기준 1시)
+    - cron: '0 1 * * *'
   workflow_dispatch: # 내가 원할 때 수동으로 즉시 실행할 수 있는 버튼 활성화
 
 jobs:
@@ -23,7 +23,7 @@ jobs:
 
       - name: 뉴스 수집 및 제미나이 분석 실행
         env:
-     GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-     GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
-     GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         run: python bot.py
