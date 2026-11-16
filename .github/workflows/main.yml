@@ -23,6 +23,7 @@ jobs:
 
       - name: 뉴스 수집 및 제미나이 분석 실행
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+     GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+     GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+     GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         run: python bot.py
