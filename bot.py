@@ -71,7 +71,7 @@ def analyze_with_gemini(news_text, pdf_url=None):
             print(f"PDF 로드 실패: {e}")
 
     result = client.models.generate_content(
-        model='gemini-2.5-flash',
+        model='gemini-3.8-flash',
         contents=contents
     )
     return result.text
