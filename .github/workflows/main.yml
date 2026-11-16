@@ -2,9 +2,9 @@ name: Daily Econ Briefing
 
 on:
   schedule:
-    # 한국 시간 매일 아침 10시 정각에 자동 실행 (UTC 기준 1시)
+    # 한국 시간 매일 아침 10시 정각 자동 실행 (UTC 기준 새벽 1시)
     - cron: '0 1 * * *'
-  workflow_dispatch: # 내가 원할 때 수동으로 즉시 실행할 수 있는 버튼 활성화
+  workflow_dispatch:
 
 jobs:
   build:
