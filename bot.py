@@ -12,32 +12,26 @@ from google.genai import types
 # 1. 환경 변수 불러오기 및 공백/오타 자동 제거
 GEMINI_API_KEY = (os.environ.get("GEMINI_API_KEY") or "").strip()
 GMAIL_ADDRESS = (os.environ.get("GMAIL_ADDRESS") or "").strip()
-# 앱 비밀번호에 실수로 들어간 띄어쓰기까지 자동으로 모두 제거
 GMAIL_APP_PASSWORD = (os.environ.get("GMAIL_APP_PASSWORD") or "").replace(" ", "").strip()
 
-# 필수 키 누락 시 즉시 에러 발생시켜 원인 알림
 if not GEMINI_API_KEY or not GMAIL_ADDRESS or not GMAIL_APP_PASSWORD:
-    print("❌ [치명적 오류] GitHub Secrets 설정이 누락되었거나 불러오지 못했습니다.")
-    print(f"- GEMINI_API_KEY 입력 여부: {bool(GEMINI_API_KEY)}")
-    print(f"- GMAIL_ADDRESS 입력 여부: {bool(GMAIL_ADDRESS)}")
-    print(f"- GMAIL_APP_PASSWORD 입력 여부: {bool(GMAIL_APP_PASSWORD)}")
+    print("❌ [치명적 오류] GitHub Secrets 설정이 누락되었습니다.")
     sys.exit(1)
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-# 2. 국내 5대 + 국외 2대 경제신문 RSS 수집 (브라우저 위장으로 차단 우회)
+# 2. 국내 5대 + 국외 2대 경제신문 RSS 수집 (최신 작동 주소 반영)
 def get_econ_news():
     rss_sources = {
-        "한국경제": "https://www.hankyung.com/feed/economy",
+        "한국경제": "https://www.hankyung.com/feed/finance", # 최신 금융/마켓 피드
         "매일경제": "https://www.mk.co.kr/rss/30000001/",
         "서울경제": "https://www.sedaily.com/RSS/Economy",
         "머니투데이": "https://rss.mt.co.kr/mt_news.xml",
-        "헤럴드경제": "http://biz.heraldcorp.com/common/rss_xml.php?ct=010100000000",
+        "헤럴드경제": "https://biz.heraldcorp.com/rss/010000000000.xml", # 최신 헤럴드경제 피드
         "WSJ(월스트리트저널)": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
         "CNBC(글로벌마켓)": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664"
     }
     
-    # 언론사 서버가 봇 차단을 하지 않도록 일반 PC 브라우저로 위장
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     }
@@ -49,10 +43,9 @@ def get_econ_news():
             feed = feedparser.parse(response.content)
             
             count = 0
-            for entry in feed.entries[:3]: # 신문사별 핵심 기사 3개씩 추출
+            for entry in feed.entries[:3]:
                 title = entry.get('title', '제목 없음').strip()
                 raw_summary = entry.get('description', entry.get('summary', '요약 없음'))
-                # 지저분한 HTML 태그 완벽 제거
                 clean_summary = re.sub('<[^<]+?>', '', raw_summary).strip()[:200]
                 link = entry.get('link', '')
                 
@@ -114,7 +107,7 @@ def analyze_with_gemini(news_text, pdf_url=None):
     )
     return result.text
 
-# 4. Gmail 발송 함수 (UTF-8 한글 인코딩 완벽 지원)
+# 4. Gmail 발송 함수 (GitHub 서버 방화벽 통과용 587 TLS 포트 사용)
 def send_email(report):
     msg = MIMEMultipart()
     msg['From'] = GMAIL_ADDRESS
@@ -124,14 +117,18 @@ def send_email(report):
     msg.attach(MIMEText(report, 'plain', 'utf-8'))
 
     try:
-        # 587 포트보다 GitHub 서버에서 훨씬 안정적인 465(SSL) 보안 포트 사용
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(GMAIL_ADDRESS, GMAIL_APP_PASSWORD)
-            server.send_message(msg)
+        # 465 포트 차단 우회를 위해 587 포트(STARTTLS) + 30초 타임아웃 적용
+        server = smtplib.SMTP('smtp.gmail.com', 587, timeout=30)
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
+        server.login(GMAIL_ADDRESS, GMAIL_APP_PASSWORD)
+        server.send_message(msg)
+        server.quit()
         print("✅ Gmail 발송 성공! 지금 메일함(받은편지함/스팸함)을 확인하세요.")
     except Exception as e:
-        print(f"❌ Gmail 발송 실패 (앱 비밀번호 또는 이메일 주소를 확인하세요): {e}")
-        sys.exit(1) # 실패 시 GitHub Actions에 빨간불(에러)을 띄우도록 강제 종료
+        print(f"❌ Gmail 발송 실패 상세 원인: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     print("1. 국내외 7대 경제신문 뉴스 수집 시작...")
